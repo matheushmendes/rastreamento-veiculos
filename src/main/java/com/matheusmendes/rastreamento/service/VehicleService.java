@@ -25,27 +25,22 @@ public class VehicleService {
     }
 
     public Vehicle findById(long id) {
-        logger.info("🔎 Buscando veículo com id " + id);
         return vehicleRepository.findById(id).orElse(null);
     }
 
     public Vehicle save(Vehicle vehicle) {
-        logger.info("💾 Salvando veículo: " + vehicle.getName());
         return vehicleRepository.save(vehicle);
     }
 
     public List<Vehicle> findAll() {
-        logger.info("📋 Listando todos os veículos...");
         return vehicleRepository.findAll();
     }
 
     public List<Vehicle> buscarPorEstado(VehicleState estado) {
-        logger.info("📍 Buscando veículos com estado: " + estado);
         return vehicleRepository.findByState(estado);
     }
 
     public List<Vehicle> buscarPorEtaAntesDe(LocalDateTime limite) {
-        logger.info("🕒 Buscando veículos com ETA antes de: " + limite);
         return vehicleRepository.findByEstimatedArrivalTimeBefore(limite);
     }
 
