@@ -1,0 +1,214 @@
+<!-- Arquivo: index.html -->
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8" />
+    <title>Painel de Rastreamento</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #ecf0f1; }
+        nav { display: flex; background: #2c3e50; color: white; }
+        nav button {
+            flex: 1; padding: 12px; border: none; background: #2c3e50; color: white;
+            font-size: 16px; cursor: pointer; transition: background 0.3s;
+        }
+        nav button:hover { background: #34495e; }
+        nav button.active { background: #1abc9c; }
+        section { display: none; padding: 15px; max-width: 900px; margin: auto; }
+        section.active { display: block; }
+        #map { height: 70vh; border-radius: 8px; margin-top: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+        form label { display: block; margin: 12px 0 5px; font-weight: bold; }
+        form input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .form-ponto { background: #f8f8f8; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px dashed #bbb; }
+        button[type="submit"], .btn-endereco {
+            background: #1abc9c; color: white; padding: 10px; border: none; border-radius: 5px; font-size: 14px; cursor: pointer;
+        }
+        button:hover { background: #16a085; }
+        .card-veiculos {
+            background: white; padding: 10px; border-radius: 6px; box-shadow: 0 0 8px rgba(0,0,0,0.1);
+            margin-top: 15px; max-height: 250px; overflow-y: auto;
+        }
+        .card-veiculos h3 { margin-top: 0; }
+        .card-item { padding: 6px 0; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <button id="tabMapa" class="active">🗺️ Mapa</button>
+    <button id="tabForm">📦 Criar Caminhão</button>
+</nav>
+
+<section id="secMapa" class="active">
+    <div id="map"></div>
+    <div class="card-veiculos" id="cardResumo">
+        <h3>🚚 Caminhões em operação</h3>
+        <div id="listaVeiculos"></div>
+    </div>
+</section>
+
+<section id="secForm">
+    <form id="vehicleForm">
+        <label>Nome</label><input name="name" required>
+        <label>Placa</label><input name="placa" required>
+        <label>Modelo</label><input name="modelo" required>
+        <label>Cor</label><input name="color" required>
+
+        <label>Endereço de Origem</label><input id="endOrigem"><button type="button" class="btn-endereco" onclick="buscarEndereco('origem')">Buscar coordenadas</button>
+        <label>Latitude Origem</label><input type="number" step="0.0001" name="latOrigem" required>
+        <label>Longitude Origem</label><input type="number" step="0.0001" name="lonOrigem" required>
+
+        <label>Endereço de Destino</label><input id="endDestino"><button type="button" class="btn-endereco" onclick="buscarEndereco('destino')">Buscar coordenadas</button>
+        <label>Latitude Destino</label><input type="number" step="0.0001" name="latDestino" required>
+        <label>Longitude Destino</label><input type="number" step="0.0001" name="lonDestino" required>
+
+        <label>Ponto Intermediário (opcional)</label>
+        <div class="form-ponto">
+            <label>Latitude</label><input type="number" step="0.0001" id="latPonto">
+            <label>Longitude</label><input type="number" step="0.0001" id="lonPonto">
+            <label>Descrição</label><input id="descPonto">
+        </div>
+
+        <button type="submit">Criar Caminhão</button>
+    </form>
+</section>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    const tabMapa = document.getElementById('tabMapa');
+    const tabForm = document.getElementById('tabForm');
+    const secMapa = document.getElementById('secMapa');
+    const secForm = document.getElementById('secForm');
+
+    tabMapa.onclick = () => {
+        tabMapa.classList.add('active');
+        tabForm.classList.remove('active');
+        secMapa.classList.add('active');
+        secForm.classList.remove('active');
+    };
+    tabForm.onclick = () => {
+        tabForm.classList.add('active');
+        tabMapa.classList.remove('active');
+        secForm.classList.add('active');
+        secMapa.classList.remove('active');
+    };
+
+    const map = L.map('map').setView([-19.0, -47.9], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    function carregarVeiculos() {
+        fetch('http://localhost:8081/vehicles')
+            .then(res => res.json())
+            .then(data => {
+                map.eachLayer(layer => {
+                    if (layer instanceof L.Marker) map.removeLayer(layer);
+                });
+
+                let listaHTML = '';
+                let total = 0;
+
+                data.forEach(v => {
+                    if (v.latitude && v.longitude) {
+                        total++;
+                        const marker = L.marker([v.latitude, v.longitude]).addTo(map);
+                        marker.bindPopup(`<b>${v.name}</b><br>${v.modelo} - ${v.placa}<br>Estado: ${v.estado}<br>ETA: ${v.estimatedArrivalTime}`);
+
+                        listaHTML += `
+              <div class="card-item">
+                <strong>${v.name}</strong> — ${v.estado}<br>
+                Modelo: ${v.modelo} | Placa: ${v.placa}<br>
+                ETA: ${v.estimatedArrivalTime} | Velocidade: 50 km/h
+              </div>`;
+                    }
+                });
+
+                document.getElementById('listaVeiculos').innerHTML = listaHTML || '<i>Nenhum veículo ativo</i>';
+            });
+    }
+
+    carregarVeiculos();
+    setInterval(carregarVeiculos, 5000);
+
+    document.getElementById('vehicleForm').onsubmit = function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const pontoIntermediario = {
+            latitude: parseFloat(document.getElementById('latPonto').value),
+            longitude: parseFloat(document.getElementById('lonPonto').value),
+            descricao: document.getElementById('descPonto').value
+        };
+        const body = {
+            name: form.name.value,
+            latitude: parseFloat(form.latOrigem.value),
+            longitude: parseFloat(form.lonOrigem.value),
+            state: "EM_ROTA",
+            car: {
+                placa: form.placa.value,
+                modelo: form.modelo.value,
+                color: form.color.value
+            },
+            route: {
+                latitudeOrigem: parseFloat(form.latOrigem.value),
+                longitudeOrigem: parseFloat(form.lonOrigem.value),
+                latitudeDestino: parseFloat(form.latDestino.value),
+                longitudeDestino: parseFloat(form.lonDestino.value),
+                pontosIntermediarios: pontoIntermediario.latitude ? [pontoIntermediario] : []
+            }
+        };
+
+        fetch('http://localhost:8081/vehicles', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        })
+            .then(res => res.json())
+            .then(data => {
+                alert("Caminhão criado com sucesso!");
+                form.reset();
+                carregarVeiculos();
+                tabMapa.click();
+            })
+            .catch(err => {
+            console.error("Erro ao criar caminhão:", err);
+            alert("Erro ao criar caminhão");
+        });
+    };
+
+    function buscarEndereco(tipo) {
+        const endereco = tipo === 'origem' ? document.getElementById('endOrigem').value : document.getElementById('endDestino').value;
+
+        if (!endereco.trim()) {
+            alert("Digite um endereço válido.");
+            return;
+        }
+
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(endereco)}&format=json`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+
+                    if (tipo === 'origem') {
+                        document.querySelector('[name="latOrigem"]').value = lat;
+                        document.querySelector('[name="lonOrigem"]').value = lon;
+                    } else {
+                        document.querySelector('[name="latDestino"]').value = lat;
+                        document.querySelector('[name="lonDestino"]').value = lon;
+                    }
+
+                    L.marker([lat, lon]).addTo(map)
+                        .bindPopup(`📍 ${endereco}<br>(${lat.toFixed(4)}, ${lon.toFixed(4)})`)
+                        .openPopup();
+                } else {
+                    alert("Endereço não encontrado.");
+                }
+            })
+            .catch(err => {
+                console.error("Erro ao buscar endereço:", err);
+                alert("Erro ao buscar coordenadas.");
+            });
+    }
+</script>
+</body>
+</html>
