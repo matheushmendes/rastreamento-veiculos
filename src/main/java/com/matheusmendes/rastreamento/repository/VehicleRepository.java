@@ -9,9 +9,7 @@ import java.util.List;
 
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
-    // 🔍 Filtra os veículos por estado (EM_ROTA, CONCLUIDO, etc.)
     List<Vehicle> findByState(VehicleState state);
 
-    // ⏱️ Retorna veículos com tempo estimado de chegada antes de determinado horário
     List<Vehicle> findByEstimatedArrivalTimeBefore(LocalDateTime limite);
 }
