@@ -32,12 +32,13 @@ public class VehicleService {
         return vehicleRepository.save(vehicle);
     }
 
-    public List<Vehicle> findAll() {
-        return vehicleRepository.findAll();
-    }
 
     public List<Vehicle> buscarPorEstado(VehicleState estado) {
         return vehicleRepository.findByState(estado);
+    }
+
+    public List<Vehicle> findAll() {
+        return vehicleRepository.findAll();
     }
 
     public List<Vehicle> buscarPorEtaAntesDe(LocalDateTime limite) {
